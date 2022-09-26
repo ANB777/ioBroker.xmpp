@@ -53,13 +53,15 @@
 		"license": "MIT",
 		"platform": "Javascript/Node.js",
 		"main": "build/main.js",
-		"icon": "xmpp.png",
+		"icon": "xmpp.svg",
 		"enabled": true,
 		"extIcon": "https://raw.githubusercontent.com/ANB777/ioBroker.xmpp/main/admin/xmpp.png",
 		"readme": "https://github.com/ANB777/ioBroker.xmpp/blob/main/README.md",
 		"loglevel": "info",
 		"mode": "daemon",
 		"type": "messaging",
+		"messagebox": true,
+		"subscribe": "messagebox",
 		"compact": true,
 		"connectionType": "cloud",
 		"dataSource": "push",
@@ -96,8 +98,8 @@
 		]
 	},
 	"native": {
-		"option1": true,
-		"option2": "42"
+		"tls": "starttls",
+		"port": 5222
 	},
 	"objects": [],
 	"instanceObjects": [

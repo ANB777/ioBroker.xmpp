@@ -14,9 +14,6 @@
 	"features": [
 		"adapter"
 	],
-	"adminFeatures": [
-		"tab"
-	],
 	"type": "messaging",
 	"startMode": "daemon",
 	"connectionType": "cloud",

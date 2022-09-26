@@ -1,16 +1,94 @@
 {
 	"i18n": true,
-	"type": "panel",
+	"type": "tabs",
 	"items": {
-		"option1": {
-			"type": "checkbox",
-			"label": "option1",
-			"newLine": true
+		"connection": {
+			"type": "panel",
+			"label": "Verbindungseinstellungen",
+			"items": {
+				"hostname": {
+					"type": "text",
+					"label": "Hostname",
+					"newLine": false,
+					"placeholder": "your.xmppserver.com"
+				},
+				"port": {
+					"type": "text",
+					"label": "Port",
+					"newLine": false
+				},
+				"tls": {
+					"type": "select",
+					"options": [
+						{"label": {"en": "STARTTLS"}, "value": "starttls"}, 
+						{"label": {"en": "Implicit TLS"}, "value": "ssl"}, 
+						{"label": {"en": "No TLS/SSL (insecure)"}, "value": "plain"}
+					],
+					"label": "TLS",
+					"newLine": false
+				},
+				"username": {
+					"type": "text",
+					"label": "Username",
+					"newLine": true
+				},
+				"password": {
+					"type": "password",
+					"label": "Password",
+					"newLine": false
+				},
+				"_test_connection": {
+					"type": "sendto",
+					"label": "Send Testmessage",
+					"newLine": true,
+					"icon": "send",
+					"variant": "outlined",
+					"data": "This is a test message from iobroker."
+				}
+			}
 		},
-		"option2": {
-			"type": "text",
-			"label": "option2",
-			"newLine": true
+		"users": {
+			"type": "panel",
+			"label": "Nutzer",
+      "items": {
+        "users": {
+          "type": "table",
+          "label": "Welche Nutzer gibt es?",
+          "items": [
+          	{
+          		"attr": "jid",
+							"label": "Nutzername (jid)",
+							"placeholder": "you@your.server.com",
+							"newLine": false,
+          		"type": "text"
+          	},
+          	{
+          		"attr": "allow_messages",
+							"label": "Nachrichten akzeptieren",
+							"tooltip": "Sollen Nachrichten von dieser jid akzeptiert werden?",
+							"default": true,
+							"newLine": false,
+          		"type": "checkbox"
+          	},
+          	{
+          		"attr": "allow_subscribe",
+							"label": "subscribe erlauben",
+							"tooltip": "Status-Subscribe erlauben (iobrokers Online-Status zeigen)",
+							"default": true,
+							"newLine": false,
+          		"type": "checkbox"
+          	},
+          	{
+          		"attr": "send_all_messages",
+							"label": "alle Nachrichten",
+							"tooltip": "Sollen alle Nachrichten an diese jid gesendet werden?",
+							"default": true,
+							"newLine": false,
+          		"type": "checkbox"
+          	}
+          ]
+        }
+      }
 		}
 	}
 }
