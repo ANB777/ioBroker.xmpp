@@ -9,11 +9,12 @@ import * as utils from "@iobroker/adapter-core";
 // Load your modules here, e.g.:
 // import * as fs from "fs";
 import { Client, client, xml, jid } from "@xmpp/client";
-import debug from "@xmpp/debug";
-import { totalmem } from "os";
+// import { log, error } from "console";
+// import debug from "@xmpp/debug";
 
 
 interface jidConfig {
+	admin_jids: string[];
 	allow_messages_from_jids: string[];
 	allow_subscribe_from_jids: string[];
 	send_all_messages_to_jids: string[];
@@ -25,6 +26,7 @@ class Xmpp extends utils.Adapter {
 	xmpp_connected: boolean = false;
 	stateChange_callbacks: Function[] = [];
 	jids: jidConfig = {
+			admin_jids: [],
 			allow_messages_from_jids: [],
 			allow_subscribe_from_jids: [],
 			send_all_messages_to_jids: []
@@ -56,6 +58,10 @@ class Xmpp extends utils.Adapter {
 		// this.log.info("config starttls: " + this.config.tls);
 		// this.log.info("config port: " + this.config.port);
 
+		let admin_jids = this.config.users
+			.filter(user => user.admin)
+			.map(user => user.jid)
+
 		let allow_messages_from_jids = this.config.users
 			.filter(user => user.allow_messages)
 			.map(user => user.jid)
@@ -68,13 +74,14 @@ class Xmpp extends utils.Adapter {
 			.filter(user => user.send_all_messages)
 			.map(user => user.jid)
 
+		this.jids.admin_jids = admin_jids
 		this.jids.allow_messages_from_jids = allow_messages_from_jids
 		this.jids.allow_subscribe_from_jids = allow_subscribe_from_jids
 		this.jids.send_all_messages_to_jids = send_all_messages_to_jids
 		
 
 
-		var scheme;
+		var scheme: string;
 		switch(this.config.tls) {
 			case 'plain':
 			case 'starttls':
@@ -95,52 +102,76 @@ class Xmpp extends utils.Adapter {
 			password: this.config.password,
 		});
 
-		debug(this.xmpp, true);
+		// debug(this.xmpp, true);
 
 		this.xmpp.on("error", (err) => {
 			this.log.error("XMPP error: " + err);
-			// console.error(err);
+			// error(err);
 		});
 
 		this.xmpp.on("offline", () => {
 			this.setState("info.connection", false, true);
 			this.xmpp_connected = false;
 			this.log.info("XMPP disconnected");
-			// console.log("offline");
+			// log("offline");
 		});
 
 		this.xmpp.on("stanza", async (stanza) => {
-			if (stanza.is("message")) {
-				// console.log(stanza)
+			try {
 
-				let sender_jid = jid(stanza.attrs.from)
-				let sender_resource = sender_jid.getResource().toString()
-				let sender = sender_jid.bare().toString()
+				// log(stanza)
+
+				const sender_jid = jid(stanza.attrs.from)
+				const sender_resource = sender_jid.getResource().toString()
+				const sender = sender_jid.bare().toString()
 				
-				let receiver_jid = jid(stanza.attrs.to)
-				let receiver = receiver_jid.bare().toString()
+				const receiver_jid = jid(stanza.attrs.to)
+				const receiver = receiver_jid.bare().toString()
+
+				// log(sender)
 
 
-				if(allow_messages_from_jids.includes(sender)) {
-					// console.log(stanza)
+				if (stanza.is("message")) {
 
-					let body = stanza.getChildText('body');
-					this.setStateAsync("last_message.from.resource", sender_resource, true);
-					this.setStateAsync("last_message.from.user", sender, true);
-					this.setStateAsync("last_message.to.user", receiver, true);
-					this.setStateAsync("last_message.message", body, true);
-					let object = {
-						"from.resource": sender_resource,
-						"from.user": sender,
-						"to.user": receiver,
-						"message": body
+					if(allow_messages_from_jids.includes(sender)) {
+						// log(stanza)
+
+						let body = stanza.getChildText('body');
+						this.setStateAsync("last_message.from.resource", sender_resource, true);
+						this.setStateAsync("last_message.from.user", sender, true);
+						this.setStateAsync("last_message.to.user", receiver, true);
+						this.setStateAsync("last_message.message", body, true);
+						let object_last_message = {
+							"from.resource": sender_resource,
+							"from.user": sender,
+							"to.user": receiver,
+							"message": body
+						}
+						this.setStateAsync("last_message.object", JSON.stringify(object_last_message), true);
+
+						// this.setState("info.connection", true, true);
 					}
-					this.setStateAsync("last_message.object", JSON.stringify(object), true);
+				} else {
+					// log(stanza.toString())
 
-					// this.setState("info.connection", true, true);
+					if (stanza.is("presence")) {
+						if(`${this.config.username}@${this.config.hostname}` !== sender) {
+							// this.xmpp.send(xml("presence", { type: "subscribe", from: `${this.config.username}@${this.config.hostname}`, to: sender  }));
+						}
+					}
 				}
-				// await this.xmpp.send(xml("presence", { type: "unavailable" }));
-				// await this.xmpp.stop();
+
+			} catch(e) {
+				let error
+		    if (typeof e === "string") {
+		        error = e.toUpperCase()
+		    } else if (e instanceof Error) {
+		        error = e.message
+		    }
+
+		    if(error) {
+					this.log.error(error)
+		    }
 			}
 		});
 
@@ -151,17 +182,14 @@ class Xmpp extends utils.Adapter {
 			this.setState("info.connection", true, true);
 			this.xmpp_connected = true;
 
-			// Sends a chat message to itself
-			// const message = xml(
-			// 	"message",
-			// 	{ type: "chat", to: 'anb@txtng.eu' },
-			// 	xml("body", {}, "I'm here to talk to you!"),
-			// );
-			// await this.xmpp.send(message);
+			// notify admins when adapter gets online
+			const stanzas = admin_jids.map((address) =>
+			  xml("message", { to: address, type: "chat" }, xml("body", {}, "XMPP Adapter is now online")),
+			);
+			await this.xmpp.sendMany(stanzas).catch(console.error);
 		});
 
 		this.xmpp.start().catch(this.log.error);
-
 
 
 
@@ -227,34 +255,6 @@ class Xmpp extends utils.Adapter {
 			},
 			native: {},
 		});
-
-		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-		this.subscribeStates("testVariable");
-		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-		// this.subscribeStates("lights.*");
-		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-		// this.subscribeStates("*");
-
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
-		// the variable testVariable is set to true as command (ack=false)
-		await this.setStateAsync("testVariable", true);
-
-		// same thing, but the value is flagged "ack"
-		// ack should be always set to true if the value is received from or acknowledged from the target system
-		await this.setStateAsync("testVariable", { val: true, ack: true });
-
-		// same thing, but the state is deleted after 30s (getState will return null afterwards)
-		await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
-
-		// examples for the checkPassword/checkGroup functions
-		let result = await this.checkPasswordAsync("admin", "iobroker");
-		this.log.info("check user admin pw iobroker: " + result);
-
-		result = await this.checkGroupAsync("admin", "admin");
-		this.log.info("check group user admin group admin: " + result);
 	}
 
 	/**
@@ -278,21 +278,6 @@ class Xmpp extends utils.Adapter {
 			callback();
 		}
 	}
-
-	// If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-	// You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-	// /**
-	//  * Is called if a subscribed object changes
-	//  */
-	// private onObjectChange(id: string, obj: ioBroker.Object | null | undefined): void {
-	// 	if (obj) {
-	// 		// The object was changed
-	// 		this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-	// 	} else {
-	// 		// The object was deleted
-	// 		this.log.info(`object ${id} deleted`);
-	// 	}
-	// }
 
 	/**
 	 * Is called if a subscribed state changes
@@ -320,34 +305,47 @@ class Xmpp extends utils.Adapter {
 	 * Using this method requires "common.messagebox" property to be set to true in io-package.json
 	 */
 	private onMessage(obj: ioBroker.Message): void {
-		// TODO: delay transmission
+		// TODO: retry transmission
 		if(!this.xmpp_connected) {
-			console.log('XMPP not connected! refusing sendTo')
+			this.log.error('XMPP not connected! refusing sendTo')
 			return;
 		}
 
 		// this.log.info("received command" + JSON.stringify(obj));
 
-		// console.log(obj)
+		// log(obj)
 		if (typeof obj === "object" && obj.message) {
 			if (obj.command === "send") {
 				// e.g. send email or pushover or whatever
 				this.log.info("send command");
 
-				// // Sends a chat message to itself
-				// const message = xml(
-				// 	"message",
-				// 	{ type: "chat", to: ['anb@txtng.eu'] },
-				// 	xml("body", {}, obj.message.toString()),
-				// );
-				// this.xmpp.send(message);
-				
-				// const new_message = JSON.stringify(this.config.users);
-				// const recipients = send_all_messages_to_jids;
-				// const stanzas = recipients.map((address) =>
-				//   xml("message", { to: address, type: "chat" }, xml("body", {}, new_message)),
-				// );
-				// this.xmpp.sendMany(stanzas).catch(console.error);
+
+				let message = ''
+				let recipients = this.jids.send_all_messages_to_jids
+			
+
+				switch(typeof obj.message) {
+					case 'string':
+						message = obj.message
+						break
+
+					case 'object':
+						if(typeof obj.message.recipients === 'object') {
+							recipients =  obj.message.recipients
+						} else if(typeof obj.message.to === 'string') {
+							recipients = [obj.message.to]
+						}
+						if(typeof obj.message.message === 'string') {
+							message = obj.message.message
+						}
+						break
+				}
+
+				// send the actual message
+				const stanzas = recipients.map((address) =>
+				  xml("message", { to: address, type: "chat" }, xml("body", {}, message)),
+				);
+				this.xmpp.sendMany(stanzas).catch(console.error);
 
 				 
 

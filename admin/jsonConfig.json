@@ -63,9 +63,17 @@
           		"type": "text"
           	},
           	{
+          		"attr": "admin",
+							"label": "Admin",
+							"help": "User zum Admin machen; d.h. es werden Status-Meldungen des Adapters an diese JID gesendet.\nNur eine JID darf Admin sein!",
+							"default": false,
+							"newLine": false,
+          		"type": "checkbox"
+          	},
+          	{
           		"attr": "allow_messages",
 							"label": "Nachrichten akzeptieren",
-							"tooltip": "Sollen Nachrichten von dieser jid akzeptiert werden?",
+							"help": "Sollen Nachrichten von dieser jid akzeptiert werden?",
 							"default": true,
 							"newLine": false,
           		"type": "checkbox"
@@ -73,7 +81,7 @@
           	{
           		"attr": "allow_subscribe",
 							"label": "subscribe erlauben",
-							"tooltip": "Status-Subscribe erlauben (iobrokers Online-Status zeigen)",
+							"help": "Status-Subscribe erlauben (iobrokers Online-Status zeigen)",
 							"default": true,
 							"newLine": false,
           		"type": "checkbox"
@@ -81,7 +89,7 @@
           	{
           		"attr": "send_all_messages",
 							"label": "alle Nachrichten",
-							"tooltip": "Sollen alle Nachrichten an diese jid gesendet werden?",
+							"help": "Sollen alle Nachrichten an diese jid gesendet werden?",
 							"default": true,
 							"newLine": false,
           		"type": "checkbox"

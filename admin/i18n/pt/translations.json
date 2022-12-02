@@ -1,5 +1,22 @@
 {
-	"xmpp adapter settings": "Configurações do adaptador para xmpp",
-	"option1": "Opção 1",
-	"option2": "opção 2"
+    "Admin": "Administrador",
+    "Hostname": "nome de anfitrião",
+    "Implicit TLS": "TLS implícito",
+    "Nachrichten akzeptieren": "Aceitar mensagens",
+    "No TLS/SSL (insecure)": "Sem TLS/SSL (inseguro)",
+    "Nutzer": "Opção 1",
+    "Nutzername (jid)": "Nome de usuário (jid)",
+    "Password": "Senha",
+    "Port": "Porta",
+    "STARTTLS": "STARTTLS",
+    "Send Testmessage": "Enviar mensagem de teste",
+    "TLS": "TLS",
+    "Username": "Nome de usuário",
+    "Verbindungseinstellungen": "Configurações do adaptador para xmpp",
+    "Welche Nutzer gibt es?": "Quais usuários estão disponíveis?",
+    "alle Nachrichten": "cada mensagem",
+    "option1": "Opção 1",
+    "option2": "opção 2",
+    "subscribe erlauben": "permitir subscrever",
+    "xmpp adapter settings": "Configurações do adaptador para xmpp"
 }
