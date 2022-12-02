@@ -181,6 +181,14 @@ class Xmpp extends utils.Adapter {
       },
       native: {}
     });
+    this.subscribeStates("testVariable");
+    await this.setStateAsync("testVariable", true);
+    await this.setStateAsync("testVariable", { val: true, ack: true });
+    await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
+    let result = await this.checkPasswordAsync("admin", "iobroker");
+    this.log.info("check user admin pw iobroker: " + result);
+    result = await this.checkGroupAsync("admin", "admin");
+    this.log.info("check group user admin group admin: " + result);
   }
   onUnload(callback) {
     try {
@@ -210,6 +218,7 @@ class Xmpp extends utils.Adapter {
   }
   onMessage(obj) {
     if (!this.xmpp_connected) {
+      this.log.error("XMPP not connected! refusing sendTo");
       return;
     }
     if (typeof obj === "object" && obj.message) {
