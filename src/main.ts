@@ -62,7 +62,7 @@ class Xmpp extends utils.Adapter {
 		// this.log.info("config port: " + this.config.port);
 
 		if(!this.config.users) {
-			Promise.reject()
+			return Promise.reject()
 		}
 
 		const admin_jids = this.config.users

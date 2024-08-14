@@ -42,8 +42,8 @@ class Xmpp extends utils.Adapter {
   async onReady() {
     this.setState("info.connection", false, true);
     this.xmpp_connected = true;
-    if ("undefined" === typeof this.config.users) {
-      Promise.reject();
+    if (!this.config.users) {
+      return Promise.reject();
     }
     const admin_jids = this.config.users.filter((user) => user.admin).map((user) => user.jid);
     const allow_messages_from_jids = this.config.users.filter((user) => user.allow_messages).map((user) => user.jid);
