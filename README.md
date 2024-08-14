@@ -1,4 +1,4 @@
-![Logo](admin/xmpp.png)
+![Logo](admin/xmpp.svg)
 # ioBroker.xmpp
 
 [![NPM version](https://img.shields.io/npm/v/iobroker.xmpp.svg)](https://www.npmjs.com/package/iobroker.xmpp)
@@ -6,7 +6,7 @@
 ![Number of Installations](https://iobroker.live/badges/xmpp-installed.svg)
 ![Current version in stable repository](https://iobroker.live/badges/xmpp-stable.svg)
 
-[![NPM](https://nodei.co/npm/iobroker.xmpp.png?downloads=true)](https://nodei.co/npm/iobroker.xmpp/)
+[![NPM](https://nodei.co/npm/iobroker.xmpp.svg?downloads=true)](https://nodei.co/npm/iobroker.xmpp/)
 
 **Tests:** ![Test and Release](https://github.com/ANB777/ioBroker.xmpp/workflows/Test%20and%20Release/badge.svg)
 

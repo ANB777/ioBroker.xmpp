@@ -18,28 +18,144 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
+var import_client = require("@xmpp/client");
+var import_debug = __toESM(require("@xmpp/debug"));
 class Xmpp extends utils.Adapter {
   constructor(options = {}) {
     super({
       ...options,
       name: "xmpp"
     });
+    this.xmpp = (0, import_client.client)();
+    this.xmpp_connected = false;
+    this.stateChange_callbacks = [];
+    this.jids = {
+      allow_messages_from_jids: [],
+      allow_subscribe_from_jids: [],
+      send_all_messages_to_jids: []
+    };
     this.on("ready", this.onReady.bind(this));
     this.on("stateChange", this.onStateChange.bind(this));
+    this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
   }
   async onReady() {
     this.setState("info.connection", false, true);
-    this.log.info("config option1: " + this.config.option1);
-    this.log.info("config option2: " + this.config.option2);
-    await this.setObjectNotExistsAsync("testVariable", {
+    this.xmpp_connected = true;
+    let allow_messages_from_jids = this.config.users.filter((user) => user.allow_messages).map((user) => user.jid);
+    let allow_subscribe_from_jids = this.config.users.filter((user) => user.allow_subscribe).map((user) => user.jid);
+    let send_all_messages_to_jids = this.config.users.filter((user) => user.send_all_messages).map((user) => user.jid);
+    this.jids.allow_messages_from_jids = allow_messages_from_jids;
+    this.jids.allow_subscribe_from_jids = allow_subscribe_from_jids;
+    this.jids.send_all_messages_to_jids = send_all_messages_to_jids;
+    var scheme;
+    switch (this.config.tls) {
+      case "plain":
+      case "starttls":
+      default:
+        scheme = "xmpp";
+        break;
+      case "ssl":
+        scheme = "xmpps";
+        break;
+    }
+    this.xmpp = (0, import_client.client)({
+      service: `${scheme}://${this.config.hostname}:${this.config.port}`,
+      domain: this.config.hostname,
+      resource: "iobroker",
+      username: this.config.username,
+      password: this.config.password
+    });
+    (0, import_debug.default)(this.xmpp, true);
+    this.xmpp.on("error", (err) => {
+      this.log.error("XMPP error: " + err);
+    });
+    this.xmpp.on("offline", () => {
+      this.setState("info.connection", false, true);
+      this.xmpp_connected = false;
+      this.log.info("XMPP disconnected");
+    });
+    this.xmpp.on("stanza", async (stanza) => {
+      if (stanza.is("message")) {
+        let sender_jid = (0, import_client.jid)(stanza.attrs.from);
+        let sender_resource = sender_jid.getResource().toString();
+        let sender = sender_jid.bare().toString();
+        let receiver_jid = (0, import_client.jid)(stanza.attrs.to);
+        let receiver = receiver_jid.bare().toString();
+        if (allow_messages_from_jids.includes(sender)) {
+          let body = stanza.getChildText("body");
+          this.setStateAsync("last_message.from.resource", sender_resource, true);
+          this.setStateAsync("last_message.from.user", sender, true);
+          this.setStateAsync("last_message.to.user", receiver, true);
+          this.setStateAsync("last_message.message", body, true);
+          let object = {
+            "from.resource": sender_resource,
+            "from.user": sender,
+            "to.user": receiver,
+            "message": body
+          };
+          this.setStateAsync("last_message.object", JSON.stringify(object), true);
+        }
+      }
+    });
+    this.xmpp.on("online", async (address) => {
+      await this.xmpp.send((0, import_client.xml)("presence"));
+      this.setState("info.connection", true, true);
+      this.xmpp_connected = true;
+    });
+    this.xmpp.start().catch(this.log.error);
+    await this.setObjectNotExistsAsync("last_message.object", {
       type: "state",
       common: {
-        name: "testVariable",
-        type: "boolean",
-        role: "indicator",
+        name: "the last received message as json object",
+        type: "string",
+        role: "json",
         read: true,
-        write: true
+        write: false
+      },
+      native: {}
+    });
+    await this.setObjectNotExistsAsync("last_message.from.resource", {
+      type: "state",
+      common: {
+        name: "resource of user that send the last received message",
+        type: "string",
+        role: "text",
+        read: true,
+        write: false
+      },
+      native: {}
+    });
+    await this.setObjectNotExistsAsync("last_message.from.user", {
+      type: "state",
+      common: {
+        name: "user that send the last received message",
+        type: "string",
+        role: "text",
+        read: true,
+        write: false
+      },
+      native: {}
+    });
+    await this.setObjectNotExistsAsync("last_message.to.user", {
+      type: "state",
+      common: {
+        name: "user the last received message was send to",
+        type: "string",
+        role: "text",
+        read: true,
+        write: false
+      },
+      native: {}
+    });
+    await this.setObjectNotExistsAsync("last_message.message", {
+      type: "state",
+      common: {
+        name: " text of the last received message",
+        type: "string",
+        role: "text",
+        read: true,
+        write: false
       },
       native: {}
     });
@@ -54,16 +170,44 @@ class Xmpp extends utils.Adapter {
   }
   onUnload(callback) {
     try {
-      callback();
+      this.xmpp.send((0, import_client.xml)("presence", { type: "unavailable" })).then(() => {
+        this.xmpp.stop().then(() => {
+          callback();
+        });
+      });
     } catch (e) {
       callback();
     }
   }
   onStateChange(id, state) {
     if (state) {
+      if (state.ack && id === "last_message.object") {
+        this.stateChange_callbacks.map(async (fn, i, fns) => {
+          var _a, _b;
+          let json = (_b = (_a = state.val) == null ? void 0 : _a.toString()) != null ? _b : "null";
+          fn(JSON.parse(json));
+          delete fns[i];
+        });
+      }
       this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
     } else {
       this.log.info(`state ${id} deleted`);
+    }
+  }
+  onMessage(obj) {
+    if (!this.xmpp_connected) {
+      console.log("XMPP not connected! refusing sendTo");
+      return;
+    }
+    if (typeof obj === "object" && obj.message) {
+      if (obj.command === "send") {
+        this.log.info("send command");
+        if (obj.callback) {
+          this.stateChange_callbacks.push((json_obj) => {
+            this.sendTo(obj.from, obj.command, json_obj, obj.callback);
+          });
+        }
+      }
     }
   }
 }

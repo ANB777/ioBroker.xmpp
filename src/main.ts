@@ -8,8 +8,27 @@ import * as utils from "@iobroker/adapter-core";
 
 // Load your modules here, e.g.:
 // import * as fs from "fs";
+import { Client, client, xml, jid } from "@xmpp/client";
+import debug from "@xmpp/debug";
+import { totalmem } from "os";
+
+
+interface jidConfig {
+	allow_messages_from_jids: string[];
+	allow_subscribe_from_jids: string[];
+	send_all_messages_to_jids: string[];
+}
+
 
 class Xmpp extends utils.Adapter {
+	xmpp: Client = client();
+	xmpp_connected: boolean = false;
+	stateChange_callbacks: Function[] = [];
+	jids: jidConfig = {
+			allow_messages_from_jids: [],
+			allow_subscribe_from_jids: [],
+			send_all_messages_to_jids: []
+		};
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
@@ -19,7 +38,7 @@ class Xmpp extends utils.Adapter {
 		this.on("ready", this.onReady.bind(this));
 		this.on("stateChange", this.onStateChange.bind(this));
 		// this.on("objectChange", this.onObjectChange.bind(this));
-		// this.on("message", this.onMessage.bind(this));
+		this.on("message", this.onMessage.bind(this));
 		this.on("unload", this.onUnload.bind(this));
 	}
 
@@ -31,25 +50,180 @@ class Xmpp extends utils.Adapter {
 
 		// Reset the connection indicator during startup
 		this.setState("info.connection", false, true);
+		this.xmpp_connected = true;
 
 		// The adapters config (in the instance object everything under the attribute "native") is accessible via
-		// this.config:
-		this.log.info("config option1: " + this.config.option1);
-		this.log.info("config option2: " + this.config.option2);
+		// this.log.info("config starttls: " + this.config.tls);
+		// this.log.info("config port: " + this.config.port);
+
+		let allow_messages_from_jids = this.config.users
+			.filter(user => user.allow_messages)
+			.map(user => user.jid)
+
+		let allow_subscribe_from_jids = this.config.users
+			.filter(user => user.allow_subscribe)
+			.map(user => user.jid)
+
+		let send_all_messages_to_jids = this.config.users
+			.filter(user => user.send_all_messages)
+			.map(user => user.jid)
+
+		this.jids.allow_messages_from_jids = allow_messages_from_jids
+		this.jids.allow_subscribe_from_jids = allow_subscribe_from_jids
+		this.jids.send_all_messages_to_jids = send_all_messages_to_jids
+		
+
+
+		var scheme;
+		switch(this.config.tls) {
+			case 'plain':
+			case 'starttls':
+			default:
+				scheme = "xmpp"
+				break;
+
+			case 'ssl':
+				scheme = "xmpps"
+				break;
+		}
+
+		this.xmpp = client({
+			service: `${scheme}://${this.config.hostname}:${this.config.port}`,
+			domain: this.config.hostname,
+			resource: "iobroker",
+			username: this.config.username,
+			password: this.config.password,
+		});
+
+		debug(this.xmpp, true);
+
+		this.xmpp.on("error", (err) => {
+			this.log.error("XMPP error: " + err);
+			// console.error(err);
+		});
+
+		this.xmpp.on("offline", () => {
+			this.setState("info.connection", false, true);
+			this.xmpp_connected = false;
+			this.log.info("XMPP disconnected");
+			// console.log("offline");
+		});
+
+		this.xmpp.on("stanza", async (stanza) => {
+			if (stanza.is("message")) {
+				// console.log(stanza)
+
+				let sender_jid = jid(stanza.attrs.from)
+				let sender_resource = sender_jid.getResource().toString()
+				let sender = sender_jid.bare().toString()
+				
+				let receiver_jid = jid(stanza.attrs.to)
+				let receiver = receiver_jid.bare().toString()
+
+
+				if(allow_messages_from_jids.includes(sender)) {
+					// console.log(stanza)
+
+					let body = stanza.getChildText('body');
+					this.setStateAsync("last_message.from.resource", sender_resource, true);
+					this.setStateAsync("last_message.from.user", sender, true);
+					this.setStateAsync("last_message.to.user", receiver, true);
+					this.setStateAsync("last_message.message", body, true);
+					let object = {
+						"from.resource": sender_resource,
+						"from.user": sender,
+						"to.user": receiver,
+						"message": body
+					}
+					this.setStateAsync("last_message.object", JSON.stringify(object), true);
+
+					// this.setState("info.connection", true, true);
+				}
+				// await this.xmpp.send(xml("presence", { type: "unavailable" }));
+				// await this.xmpp.stop();
+			}
+		});
+
+		this.xmpp.on("online", async (address) => {
+			// Makes itself available
+			await this.xmpp.send(xml("presence"));
+
+			this.setState("info.connection", true, true);
+			this.xmpp_connected = true;
+
+			// Sends a chat message to itself
+			// const message = xml(
+			// 	"message",
+			// 	{ type: "chat", to: 'anb@txtng.eu' },
+			// 	xml("body", {}, "I'm here to talk to you!"),
+			// );
+			// await this.xmpp.send(message);
+		});
+
+		this.xmpp.start().catch(this.log.error);
+
+
+
+
+
 
 		/*
 		For every state in the system there has to be also an object of type state
 		Here a simple template for a boolean variable named "testVariable"
 		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
 		*/
-		await this.setObjectNotExistsAsync("testVariable", {
+		await this.setObjectNotExistsAsync("last_message.object", {
 			type: "state",
 			common: {
-				name: "testVariable",
-				type: "boolean",
-				role: "indicator",
+				name: "the last received message as json object",
+				type: "string",
+				role: "json",
 				read: true,
-				write: true,
+				write: false,
+			},
+			native: {},
+		});
+		await this.setObjectNotExistsAsync("last_message.from.resource", {
+			type: "state",
+			common: {
+				name: "resource of user that send the last received message",
+				type: "string",
+				role: "text",
+				read: true,
+				write: false,
+			},
+			native: {},
+		});
+		await this.setObjectNotExistsAsync("last_message.from.user", {
+			type: "state",
+			common: {
+				name: "user that send the last received message",
+				type: "string",
+				role: "text",
+				read: true,
+				write: false,
+			},
+			native: {},
+		});
+		await this.setObjectNotExistsAsync("last_message.to.user", {
+			type: "state",
+			common: {
+				name: "user the last received message was send to",
+				type: "string",
+				role: "text",
+				read: true,
+				write: false,
+			},
+			native: {},
+		});
+		await this.setObjectNotExistsAsync("last_message.message", {
+			type: "state",
+			common: {
+				name:" text of the last received message",
+				type: "string",
+				role: "text",
+				read: true,
+				write: false,
 			},
 			native: {},
 		});
@@ -94,7 +268,12 @@ class Xmpp extends utils.Adapter {
 			// ...
 			// clearInterval(interval1);
 
-			callback();
+			this.xmpp.send(xml("presence", { type: "unavailable" })).then(() => {
+				this.xmpp.stop().then(() => {
+					callback();
+				});
+			});
+
 		} catch (e) {
 			callback();
 		}
@@ -121,6 +300,13 @@ class Xmpp extends utils.Adapter {
 	private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
 		if (state) {
 			// The state was changed
+			if(state.ack && id === 'last_message.object') {
+				this.stateChange_callbacks.map(async (fn, i, fns) => {
+					let json = state.val?.toString() ?? 'null';
+					fn(JSON.parse(json));
+					delete fns[i];
+				});
+			}
 			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
 		} else {
 			// The state was deleted
@@ -129,21 +315,51 @@ class Xmpp extends utils.Adapter {
 	}
 
 	// If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-	// /**
-	//  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-	//  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-	//  */
-	// private onMessage(obj: ioBroker.Message): void {
-	// 	if (typeof obj === "object" && obj.message) {
-	// 		if (obj.command === "send") {
-	// 			// e.g. send email or pushover or whatever
-	// 			this.log.info("send command");
+	/**
+	 * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
+	 * Using this method requires "common.messagebox" property to be set to true in io-package.json
+	 */
+	private onMessage(obj: ioBroker.Message): void {
+		// TODO: delay transmission
+		if(!this.xmpp_connected) {
+			console.log('XMPP not connected! refusing sendTo')
+			return;
+		}
 
-	// 			// Send response in callback if required
-	// 			if (obj.callback) this.sendTo(obj.from, obj.command, "Message received", obj.callback);
-	// 		}
-	// 	}
-	// }
+		// this.log.info("received command" + JSON.stringify(obj));
+
+		// console.log(obj)
+		if (typeof obj === "object" && obj.message) {
+			if (obj.command === "send") {
+				// e.g. send email or pushover or whatever
+				this.log.info("send command");
+
+				// // Sends a chat message to itself
+				// const message = xml(
+				// 	"message",
+				// 	{ type: "chat", to: ['anb@txtng.eu'] },
+				// 	xml("body", {}, obj.message.toString()),
+				// );
+				// this.xmpp.send(message);
+				
+				// const new_message = JSON.stringify(this.config.users);
+				// const recipients = send_all_messages_to_jids;
+				// const stanzas = recipients.map((address) =>
+				//   xml("message", { to: address, type: "chat" }, xml("body", {}, new_message)),
+				// );
+				// this.xmpp.sendMany(stanzas).catch(console.error);
+
+				 
+
+				// Send response in callback if required
+				if(obj.callback) {
+					this.stateChange_callbacks.push((json_obj: object) => {
+						this.sendTo(obj.from, obj.command, json_obj, obj.callback);
+					})
+				}
+			}
+		}
+	}
 
 }
 
