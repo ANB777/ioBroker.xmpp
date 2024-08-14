@@ -21,16 +21,19 @@ interface jidConfig {
 }
 
 
+type MessageCallback = (result?: any) => void | Promise<void>;
+
+
 class Xmpp extends utils.Adapter {
 	xmpp: Client = client();
-	xmpp_connected: boolean = false;
-	stateChange_callbacks: Function[] = [];
+	xmpp_connected = false;
+	stateChange_callbacks: MessageCallback[] = [];
 	jids: jidConfig = {
-			admin_jids: [],
-			allow_messages_from_jids: [],
-			allow_subscribe_from_jids: [],
-			send_all_messages_to_jids: []
-		};
+		admin_jids: [],
+		allow_messages_from_jids: [],
+		allow_subscribe_from_jids: [],
+		send_all_messages_to_jids: []
+	};
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
@@ -58,19 +61,23 @@ class Xmpp extends utils.Adapter {
 		// this.log.info("config starttls: " + this.config.tls);
 		// this.log.info("config port: " + this.config.port);
 
-		let admin_jids = this.config.users
+		if(!this.config.users) {
+			Promise.reject()
+		}
+
+		const admin_jids = this.config.users
 			.filter(user => user.admin)
 			.map(user => user.jid)
 
-		let allow_messages_from_jids = this.config.users
+		const allow_messages_from_jids = this.config.users
 			.filter(user => user.allow_messages)
 			.map(user => user.jid)
 
-		let allow_subscribe_from_jids = this.config.users
+		const allow_subscribe_from_jids = this.config.users
 			.filter(user => user.allow_subscribe)
 			.map(user => user.jid)
 
-		let send_all_messages_to_jids = this.config.users
+		const send_all_messages_to_jids = this.config.users
 			.filter(user => user.send_all_messages)
 			.map(user => user.jid)
 
@@ -78,18 +85,18 @@ class Xmpp extends utils.Adapter {
 		this.jids.allow_messages_from_jids = allow_messages_from_jids
 		this.jids.allow_subscribe_from_jids = allow_subscribe_from_jids
 		this.jids.send_all_messages_to_jids = send_all_messages_to_jids
-		
 
 
-		var scheme: string;
+
+		let scheme: string;
 		switch(this.config.tls) {
-			case 'plain':
-			case 'starttls':
+			case "plain":
+			case "starttls":
 			default:
 				scheme = "xmpp"
 				break;
 
-			case 'ssl':
+			case "ssl":
 				scheme = "xmpps"
 				break;
 		}
@@ -124,7 +131,7 @@ class Xmpp extends utils.Adapter {
 				const sender_jid = jid(stanza.attrs.from)
 				const sender_resource = sender_jid.getResource().toString()
 				const sender = sender_jid.bare().toString()
-				
+
 				const receiver_jid = jid(stanza.attrs.to)
 				const receiver = receiver_jid.bare().toString()
 
@@ -136,12 +143,12 @@ class Xmpp extends utils.Adapter {
 					if(allow_messages_from_jids.includes(sender)) {
 						// log(stanza)
 
-						let body = stanza.getChildText('body');
+						const body = stanza.getChildText("body");
 						this.setStateAsync("last_message.from.resource", sender_resource, true);
 						this.setStateAsync("last_message.from.user", sender, true);
 						this.setStateAsync("last_message.to.user", receiver, true);
 						this.setStateAsync("last_message.message", body, true);
-						let object_last_message = {
+						const object_last_message = {
 							"from.resource": sender_resource,
 							"from.user": sender,
 							"to.user": receiver,
@@ -175,7 +182,7 @@ class Xmpp extends utils.Adapter {
 			}
 		});
 
-		this.xmpp.on("online", async (address) => {
+		this.xmpp.on("online", async () => {
 			// Makes itself available
 			await this.xmpp.send(xml("presence"));
 
@@ -285,9 +292,9 @@ class Xmpp extends utils.Adapter {
 	private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
 		if (state) {
 			// The state was changed
-			if(state.ack && id === 'last_message.object') {
+			if(state.ack && id === "last_message.object") {
 				this.stateChange_callbacks.map(async (fn, i, fns) => {
-					let json = state.val?.toString() ?? 'null';
+					const json = state.val?.toString() ?? "null";
 					fn(JSON.parse(json));
 					delete fns[i];
 				});
@@ -307,7 +314,7 @@ class Xmpp extends utils.Adapter {
 	private onMessage(obj: ioBroker.Message): void {
 		// TODO: retry transmission
 		if(!this.xmpp_connected) {
-			this.log.error('XMPP not connected! refusing sendTo')
+			this.log.error("XMPP not connected! refusing sendTo")
 			return;
 		}
 
@@ -320,22 +327,22 @@ class Xmpp extends utils.Adapter {
 				this.log.info("send command");
 
 
-				let message = ''
+				let message = ""
 				let recipients = this.jids.send_all_messages_to_jids
-			
+
 
 				switch(typeof obj.message) {
-					case 'string':
+					case "string":
 						message = obj.message
 						break
 
-					case 'object':
-						if(typeof obj.message.recipients === 'object') {
+					case "object":
+						if(typeof obj.message.recipients === "object") {
 							recipients =  obj.message.recipients
-						} else if(typeof obj.message.to === 'string') {
+						} else if(typeof obj.message.to === "string") {
 							recipients = [obj.message.to]
 						}
-						if(typeof obj.message.message === 'string') {
+						if(typeof obj.message.message === "string") {
 							message = obj.message.message
 						}
 						break
@@ -347,7 +354,7 @@ class Xmpp extends utils.Adapter {
 				);
 				this.xmpp.sendMany(stanzas).catch(console.error);
 
-				 
+
 
 				// Send response in callback if required
 				if(obj.callback) {

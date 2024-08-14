@@ -42,15 +42,18 @@ class Xmpp extends utils.Adapter {
   async onReady() {
     this.setState("info.connection", false, true);
     this.xmpp_connected = true;
-    let admin_jids = this.config.users.filter((user) => user.admin).map((user) => user.jid);
-    let allow_messages_from_jids = this.config.users.filter((user) => user.allow_messages).map((user) => user.jid);
-    let allow_subscribe_from_jids = this.config.users.filter((user) => user.allow_subscribe).map((user) => user.jid);
-    let send_all_messages_to_jids = this.config.users.filter((user) => user.send_all_messages).map((user) => user.jid);
+    if ("undefined" === typeof this.config.users) {
+      Promise.reject();
+    }
+    const admin_jids = this.config.users.filter((user) => user.admin).map((user) => user.jid);
+    const allow_messages_from_jids = this.config.users.filter((user) => user.allow_messages).map((user) => user.jid);
+    const allow_subscribe_from_jids = this.config.users.filter((user) => user.allow_subscribe).map((user) => user.jid);
+    const send_all_messages_to_jids = this.config.users.filter((user) => user.send_all_messages).map((user) => user.jid);
     this.jids.admin_jids = admin_jids;
     this.jids.allow_messages_from_jids = allow_messages_from_jids;
     this.jids.allow_subscribe_from_jids = allow_subscribe_from_jids;
     this.jids.send_all_messages_to_jids = send_all_messages_to_jids;
-    var scheme;
+    let scheme;
     switch (this.config.tls) {
       case "plain":
       case "starttls":
@@ -85,12 +88,12 @@ class Xmpp extends utils.Adapter {
         const receiver = receiver_jid.bare().toString();
         if (stanza.is("message")) {
           if (allow_messages_from_jids.includes(sender)) {
-            let body = stanza.getChildText("body");
+            const body = stanza.getChildText("body");
             this.setStateAsync("last_message.from.resource", sender_resource, true);
             this.setStateAsync("last_message.from.user", sender, true);
             this.setStateAsync("last_message.to.user", receiver, true);
             this.setStateAsync("last_message.message", body, true);
-            let object_last_message = {
+            const object_last_message = {
               "from.resource": sender_resource,
               "from.user": sender,
               "to.user": receiver,
@@ -116,12 +119,12 @@ class Xmpp extends utils.Adapter {
         }
       }
     });
-    this.xmpp.on("online", async (address) => {
+    this.xmpp.on("online", async () => {
       await this.xmpp.send((0, import_client.xml)("presence"));
       this.setState("info.connection", true, true);
       this.xmpp_connected = true;
       const stanzas = admin_jids.map(
-        (address2) => (0, import_client.xml)("message", { to: address2, type: "chat" }, (0, import_client.xml)("body", {}, "XMPP Adapter is now online"))
+        (address) => (0, import_client.xml)("message", { to: address, type: "chat" }, (0, import_client.xml)("body", {}, "XMPP Adapter is now online"))
       );
       await this.xmpp.sendMany(stanzas).catch(console.error);
     });
@@ -181,14 +184,6 @@ class Xmpp extends utils.Adapter {
       },
       native: {}
     });
-    this.subscribeStates("testVariable");
-    await this.setStateAsync("testVariable", true);
-    await this.setStateAsync("testVariable", { val: true, ack: true });
-    await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
-    let result = await this.checkPasswordAsync("admin", "iobroker");
-    this.log.info("check user admin pw iobroker: " + result);
-    result = await this.checkGroupAsync("admin", "admin");
-    this.log.info("check group user admin group admin: " + result);
   }
   onUnload(callback) {
     try {
@@ -206,7 +201,7 @@ class Xmpp extends utils.Adapter {
       if (state.ack && id === "last_message.object") {
         this.stateChange_callbacks.map(async (fn, i, fns) => {
           var _a, _b;
-          let json = (_b = (_a = state.val) == null ? void 0 : _a.toString()) != null ? _b : "null";
+          const json = (_b = (_a = state.val) == null ? void 0 : _a.toString()) != null ? _b : "null";
           fn(JSON.parse(json));
           delete fns[i];
         });
