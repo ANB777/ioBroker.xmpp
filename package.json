@@ -19,7 +19,7 @@
     "url": "git@github.com:ANB777/ioBroker.xmpp.git"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^2.6.2",
+    "@iobroker/adapter-core": "^3.1.6",
     "@types/xmpp__client": "^0.13.0",
     "@types/xmpp__debug": "^0.13.0",
     "@xmpp/client": "^0.13.1",
@@ -29,12 +29,13 @@
   "devDependencies": {
     "@alcalzone/release-script": "^2.2.2",
     "@iobroker/adapter-dev": "^1.0.1",
-    "@iobroker/testing": "^4.1.0",
-    "@tsconfig/node14": "^1.0.3",
+    "@iobroker/testing": "^4.1.3",
+    "@iobroker/dev-server": "^0.7.3",
+    "@tsconfig/node18": "^18.2.4",
     "@types/chai": "^4.3.3",
     "@types/chai-as-promised": "^7.1.5",
-    "@types/mocha": "^9.1.1",
-    "@types/node": "^14.18.28",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^18.11.9",
     "@types/proxyquire": "^1.3.28",
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.8",
@@ -43,14 +44,14 @@
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "eslint": "^8.23.0",
-    "mocha": "^9.2.2",
+    "mocha": "^10.7.3",
     "proxyquire": "^2.1.3",
     "rimraf": "^3.0.2",
     "sinon": "^13.0.2",
     "sinon-chai": "^3.7.0",
     "source-map-support": "^0.5.21",
-    "ts-node": "^10.9.1",
-    "typescript": "~4.6.4"
+    "ts-node": "^10.9.2",
+    "typescript": "~5.5.4"
   },
   "main": "build/main.js",
   "files": [
@@ -75,7 +76,8 @@
     "check": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
     "translate": "translate-adapter",
-    "release": "release-script"
+    "release": "release-script",
+    "dev-server": "dev-server"
   },
   "bugs": {
     "url": "https://github.com/ANB777/ioBroker.xmpp/issues"

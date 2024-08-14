@@ -164,8 +164,6 @@ class Xmpp extends utils.Adapter {
 						// this.setState("info.connection", true, true);
 					}
 				} else {
-					// log(stanza.toString())
-
 					if (stanza.is("presence")) {
 						if(`${this.config.username}@${this.config.hostname}` !== sender) {
 							// this.xmpp.send(xml("presence", { type: "subscribe", from: `${this.config.username}@${this.config.hostname}`, to: sender  }));
@@ -183,6 +181,7 @@ class Xmpp extends utils.Adapter {
 
 		    if(error) {
 					this.log.error(error)
+					// trace();
 		    }
 			}
 		});

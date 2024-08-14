@@ -2,6 +2,11 @@
     "common": {
         "name": "xmpp",
         "version": "0.0.2",
+        "licenseInformation": {
+            "license": "MIT",
+            "type": "free"
+        },
+        "tier": 2,
         "news": {
             "0.0.2": {
                 "en": "initial release",
@@ -50,7 +55,6 @@
             "commands",
             "selfhosted"
         ],
-        "license": "MIT",
         "platform": "Javascript/Node.js",
         "main": "build/main.js",
         "icon": "xmpp.svg",
@@ -61,7 +65,6 @@
         "mode": "daemon",
         "type": "messaging",
         "messagebox": true,
-        "subscribe": "messagebox",
         "compact": true,
         "connectionType": "cloud",
         "dataSource": "push",
