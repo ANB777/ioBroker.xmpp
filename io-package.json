@@ -1,9 +1,9 @@
 {
     "common": {
         "name": "xmpp",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "news": {
-            "0.0.1": {
+            "0.0.2": {
                 "en": "initial release",
                 "de": "Erstveröffentlichung",
                 "ru": "Начальная версия",
@@ -55,7 +55,7 @@
         "main": "build/main.js",
         "icon": "xmpp.svg",
         "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/ANB777/ioBroker.xmpp/main/admin/xmpp.png",
+        "extIcon": "https://raw.githubusercontent.com/ANB777/ioBroker.xmpp/main/admin/xmpp.svg",
         "readme": "https://github.com/ANB777/ioBroker.xmpp/blob/main/README.md",
         "loglevel": "info",
         "mode": "daemon",
