@@ -1,5 +1,22 @@
 {
-	"xmpp adapter settings": "Настройки адаптера для xmpp",
-	"option1": "Опция 1",
-	"option2": "вариант 2"
+    "Admin": "Администратор",
+    "Hostname": "Имя хоста",
+    "Implicit TLS": "Неявный TLS",
+    "Nachrichten akzeptieren": "Принимать сообщения",
+    "No TLS/SSL (insecure)": "Нет TLS/SSL (небезопасно)",
+    "Nutzer": "Опция 1",
+    "Nutzername (jid)": "Имя пользователя (джид)",
+    "Password": "Пароль",
+    "Port": "Порт",
+    "STARTTLS": "СТАРТЛС",
+    "Send Testmessage": "Отправить тестовое сообщение",
+    "TLS": "TLS",
+    "Username": "Имя пользователя",
+    "Verbindungseinstellungen": "Настройки адаптера для xmpp",
+    "Welche Nutzer gibt es?": "Какие пользователи доступны?",
+    "alle Nachrichten": "каждое сообщение",
+    "option1": "Опция 1",
+    "option2": "вариант 2",
+    "subscribe erlauben": "разрешить подписку",
+    "xmpp adapter settings": "Настройки адаптера для xmpp"
 }

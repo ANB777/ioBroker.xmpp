@@ -22,7 +22,6 @@
 	"language": "TypeScript",
 	"nodeVersion": "14",
 	"adminUi": "json",
-	"tabReact": "no",
 	"tools": [
 		"ESLint",
 		"devcontainer"

@@ -13,6 +13,7 @@ declare global {
 		}
 		interface UsersConfig {
 			jid: string;
+			admin: boolean;
 			allow_messages: boolean;
 			allow_subscribe: boolean;
 			send_all_messages: boolean;

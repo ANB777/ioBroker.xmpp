@@ -1,5 +1,22 @@
 {
-	"xmpp adapter settings": "xmpp的适配器设置",
-	"option1": "选项1",
-	"option2": "选项2"
+    "Admin": "行政",
+    "Hostname": "主机名",
+    "Implicit TLS": "隐式 TLS",
+    "Nachrichten akzeptieren": "接受消息",
+    "No TLS/SSL (insecure)": "无 TLS/SSL（不安全）",
+    "Nutzer": "选项1",
+    "Nutzername (jid)": "用户名 (jid)",
+    "Password": "密码",
+    "Port": "港口",
+    "STARTTLS": "起始TLS",
+    "Send Testmessage": "发送测试信息",
+    "TLS": "TLS",
+    "Username": "用户名",
+    "Verbindungseinstellungen": "xmpp的适配器设置",
+    "Welche Nutzer gibt es?": "哪些用户可用？",
+    "alle Nachrichten": "每条消息",
+    "option1": "选项1",
+    "option2": "选项2",
+    "subscribe erlauben": "允许订阅",
+    "xmpp adapter settings": "xmpp的适配器设置"
 }

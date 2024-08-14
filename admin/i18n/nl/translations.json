@@ -1,5 +1,22 @@
 {
-	"xmpp adapter settings": "Adapterinstellingen voor xmpp",
-	"option1": "Optie 1",
-	"option2": "Optie 2"
+    "Admin": "beheerder",
+    "Hostname": "Hostnaam",
+    "Implicit TLS": "Impliciete TLS",
+    "Nachrichten akzeptieren": "Accepteer berichten",
+    "No TLS/SSL (insecure)": "Geen TLS/SSL (onveilig)",
+    "Nutzer": "Optie 1",
+    "Nutzername (jid)": "Gebruikersnaam (jid)",
+    "Password": "Wachtwoord",
+    "Port": "Haven",
+    "STARTTLS": "STARTTLS",
+    "Send Testmessage": "Testbericht verzenden",
+    "TLS": "TLS",
+    "Username": "Gebruikersnaam",
+    "Verbindungseinstellungen": "Adapterinstellingen voor xmpp",
+    "Welche Nutzer gibt es?": "Welke gebruikers zijn beschikbaar?",
+    "alle Nachrichten": "elk bericht",
+    "option1": "Optie 1",
+    "option2": "Optie 2",
+    "subscribe erlauben": "abonneren toestaan",
+    "xmpp adapter settings": "Adapterinstellingen voor xmpp"
 }

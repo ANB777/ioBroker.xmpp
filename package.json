@@ -1,6 +1,6 @@
 {
   "name": "iobroker.xmpp",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A XMPP Client that interconnects iobroker with your XMPP server. Send messages to your account or trigger actions by messages to this bot.",
   "author": {
     "name": "ANB777",
