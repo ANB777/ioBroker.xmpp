@@ -23,7 +23,8 @@
     "@types/xmpp__client": "^0.13.0",
     "@types/xmpp__debug": "^0.13.0",
     "@xmpp/client": "^0.13.1",
-    "@xmpp/debug": "^0.13.0"
+    "@xmpp/debug": "^0.13.0",
+    "dotenv": "^16.0.3"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^2.2.2",

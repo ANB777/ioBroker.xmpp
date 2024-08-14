@@ -9,7 +9,7 @@ import * as utils from "@iobroker/adapter-core";
 // Load your modules here, e.g.:
 // import * as fs from "fs";
 import { Client, client, xml, jid } from "@xmpp/client";
-// import { log, error } from "console";
+// import { log, error, trace } from "console";
 // import debug from "@xmpp/debug";
 
 
@@ -61,23 +61,29 @@ class Xmpp extends utils.Adapter {
 		// this.log.info("config starttls: " + this.config.tls);
 		// this.log.info("config port: " + this.config.port);
 
-		if(!this.config.users) {
+	if ("undefined" === typeof this.config.users || !this.config.users.length) {
 			return Promise.reject()
 		}
+		let users
+		if ("object" === typeof this.config.users) {
+			users = Object.values(this.config.users)
+		} else {
+			users = this.config.users
+		}
 
-		const admin_jids = this.config.users
+		const admin_jids = users
 			.filter(user => user.admin)
 			.map(user => user.jid)
 
-		const allow_messages_from_jids = this.config.users
+		const allow_messages_from_jids = users
 			.filter(user => user.allow_messages)
 			.map(user => user.jid)
 
-		const allow_subscribe_from_jids = this.config.users
+		const allow_subscribe_from_jids = users
 			.filter(user => user.allow_subscribe)
 			.map(user => user.jid)
 
-		const send_all_messages_to_jids = this.config.users
+		const send_all_messages_to_jids = users
 			.filter(user => user.send_all_messages)
 			.map(user => user.jid)
 
@@ -104,7 +110,7 @@ class Xmpp extends utils.Adapter {
 		this.xmpp = client({
 			service: `${scheme}://${this.config.hostname}:${this.config.port}`,
 			domain: this.config.hostname,
-			resource: "iobroker",
+			resource: "iobroker+" + (Math.random() + 1).toString(36).substring(5),
 			username: this.config.username,
 			password: this.config.password,
 		});
@@ -126,23 +132,22 @@ class Xmpp extends utils.Adapter {
 		this.xmpp.on("stanza", async (stanza) => {
 			try {
 
-				// log(stanza)
+				// log(stanza.toString())
 
-				const sender_jid = jid(stanza.attrs.from)
-				const sender_resource = sender_jid.getResource().toString()
-				const sender = sender_jid.bare().toString()
-
-				const receiver_jid = jid(stanza.attrs.to)
-				const receiver = receiver_jid.bare().toString()
+				const sender_jid = stanza.attrs.from ? jid(stanza.attrs.from) : ""
+				const sender_resource = sender_jid ? sender_jid.getResource().toString() : ""
+				const sender = sender_jid ? sender_jid.bare().toString() : ""
 
 				// log(sender)
 
 
 				if (stanza.is("message")) {
+					const receiver_jid = jid(stanza.attrs.to)
+					const receiver = receiver_jid.bare().toString()
+
+					// log("message")
 
 					if(allow_messages_from_jids.includes(sender)) {
-						// log(stanza)
-
 						const body = stanza.getChildText("body");
 						this.setStateAsync("last_message.from.resource", sender_resource, true);
 						this.setStateAsync("last_message.from.user", sender, true);

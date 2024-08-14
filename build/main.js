@@ -14,41 +14,54 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
 var import_client = require("@xmpp/client");
 class Xmpp extends utils.Adapter {
+  xmpp = (0, import_client.client)();
+  xmpp_connected = false;
+  stateChange_callbacks = [];
+  jids = {
+    admin_jids: [],
+    allow_messages_from_jids: [],
+    allow_subscribe_from_jids: [],
+    send_all_messages_to_jids: []
+  };
   constructor(options = {}) {
     super({
       ...options,
       name: "xmpp"
     });
-    this.xmpp = (0, import_client.client)();
-    this.xmpp_connected = false;
-    this.stateChange_callbacks = [];
-    this.jids = {
-      admin_jids: [],
-      allow_messages_from_jids: [],
-      allow_subscribe_from_jids: [],
-      send_all_messages_to_jids: []
-    };
     this.on("ready", this.onReady.bind(this));
     this.on("stateChange", this.onStateChange.bind(this));
     this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
   }
+  /**
+   * Is called when databases are connected and adapter received configuration.
+   */
   async onReady() {
     this.setState("info.connection", false, true);
     this.xmpp_connected = true;
-    if (!this.config.users) {
+    if ("undefined" === typeof this.config.users || !this.config.users.length) {
       return Promise.reject();
     }
-    const admin_jids = this.config.users.filter((user) => user.admin).map((user) => user.jid);
-    const allow_messages_from_jids = this.config.users.filter((user) => user.allow_messages).map((user) => user.jid);
-    const allow_subscribe_from_jids = this.config.users.filter((user) => user.allow_subscribe).map((user) => user.jid);
-    const send_all_messages_to_jids = this.config.users.filter((user) => user.send_all_messages).map((user) => user.jid);
+    let users;
+    if ("object" === typeof this.config.users) {
+      users = Object.values(this.config.users);
+    } else {
+      users = this.config.users;
+    }
+    const admin_jids = users.filter((user) => user.admin).map((user) => user.jid);
+    const allow_messages_from_jids = users.filter((user) => user.allow_messages).map((user) => user.jid);
+    const allow_subscribe_from_jids = users.filter((user) => user.allow_subscribe).map((user) => user.jid);
+    const send_all_messages_to_jids = users.filter((user) => user.send_all_messages).map((user) => user.jid);
     this.jids.admin_jids = admin_jids;
     this.jids.allow_messages_from_jids = allow_messages_from_jids;
     this.jids.allow_subscribe_from_jids = allow_subscribe_from_jids;
@@ -67,7 +80,7 @@ class Xmpp extends utils.Adapter {
     this.xmpp = (0, import_client.client)({
       service: `${scheme}://${this.config.hostname}:${this.config.port}`,
       domain: this.config.hostname,
-      resource: "iobroker",
+      resource: "iobroker+" + (Math.random() + 1).toString(36).substring(5),
       username: this.config.username,
       password: this.config.password
     });
@@ -81,12 +94,12 @@ class Xmpp extends utils.Adapter {
     });
     this.xmpp.on("stanza", async (stanza) => {
       try {
-        const sender_jid = (0, import_client.jid)(stanza.attrs.from);
-        const sender_resource = sender_jid.getResource().toString();
-        const sender = sender_jid.bare().toString();
-        const receiver_jid = (0, import_client.jid)(stanza.attrs.to);
-        const receiver = receiver_jid.bare().toString();
+        const sender_jid = stanza.attrs.from ? (0, import_client.jid)(stanza.attrs.from) : "";
+        const sender_resource = sender_jid ? sender_jid.getResource().toString() : "";
+        const sender = sender_jid ? sender_jid.bare().toString() : "";
         if (stanza.is("message")) {
+          const receiver_jid = (0, import_client.jid)(stanza.attrs.to);
+          const receiver = receiver_jid.bare().toString();
           if (allow_messages_from_jids.includes(sender)) {
             const body = stanza.getChildText("body");
             this.setStateAsync("last_message.from.resource", sender_resource, true);
@@ -185,6 +198,9 @@ class Xmpp extends utils.Adapter {
       native: {}
     });
   }
+  /**
+   * Is called when adapter shuts down - callback has to be called under any circumstances!
+   */
   onUnload(callback) {
     try {
       this.xmpp.send((0, import_client.xml)("presence", { type: "unavailable" })).then(() => {
@@ -196,6 +212,9 @@ class Xmpp extends utils.Adapter {
       callback();
     }
   }
+  /**
+   * Is called if a subscribed state changes
+   */
   onStateChange(id, state) {
     if (state) {
       if (state.ack && id === "last_message.object") {
@@ -211,6 +230,11 @@ class Xmpp extends utils.Adapter {
       this.log.info(`state ${id} deleted`);
     }
   }
+  // If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
+  /**
+   * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
+   * Using this method requires "common.messagebox" property to be set to true in io-package.json
+   */
   onMessage(obj) {
     if (!this.xmpp_connected) {
       this.log.error("XMPP not connected! refusing sendTo");
